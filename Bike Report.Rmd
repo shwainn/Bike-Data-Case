@@ -1,0 +1,29 @@
+---
+title: "Bike Data"
+author: "Shawn Ha"
+date: "2022-10-20"
+output: html_document
+---
+
+# Case Overview
+**Cyclistic** is a bike-sharing service based in Chicago with over 5,000 bikes and over 600 docking stations. Users can unlock a bike from any station and lock it at any station. Users can get single rides, day passes, or become members for an annual subscription fee. As member subscriptions are more profitable, Cyclistic wants to convert casual riders (who ride with single or day passes) into members (who ride with subscriptions). How do casual riders and members use the service differently, and how can that inform how Cyclistic should market membership to casual riders?
+
+# Data
+
+### Data Overview
+The data covers rides that started during the month of September 2022. It includes information like time of the ride (start and end), location of the ride (start station, end station, and start/end latitude/longitude), and the member status of the rider. 
+
+### Data Cleaning
+I removed 175 observations where the ride lasted for more than 48 hours. I'm assuming that these are a result of a rider forgetting to lock a bike; this is corroborated by all of the long rides being attributed to casual riders, who are more likely to be unfamiliar with the process and not know or forget to lock a bike after use. 
+
+I also removed 9 observations where the ride is listed to have ended before it started. This is likely due to some error in data collection and can't be used for analysis. 
+
+I removed 63 observations where the ride is listed to have ended the second it started. This is also likely due to some error, but can possibly be a user accidentally immediately locking the bike after unlocking. Either way, the observations don't represent real use cases of the service and therefore wouldn't be useful for analysis. 
+
+Similarly, I chose to ignore 15,458 observations where the ride lasted less than one minute. This is an arbitrary threshold and can be refined by observing consumer behaviors, but I felt that this filters out many of the data points that aren't actual rides. Rides longer than one minute are much more likely to represent a customer legitimately using a bike. 
+
+After this, we are left with 685,634 observations, of which all of them represent rides that last between one minute and 48 hours, inclusive. 
+
+### Data Transformations
+To make use of latitude and longitude data, I used a Haversine formula to calculate the great-circle distance between the start station and the end station. Note that this value can be up to 0.5% inaccurate (since the formula applies to a perfect sphere, which the Earth isn't) and would only be accurate if the rider took a straight path to their destination, which is basically impossible. However, this value can be useful to understand if a rider is using the bike to get somewhere or just to ride around, which can be indicated by the stations being far away from one another versus the stations being close by. 
+
