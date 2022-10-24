@@ -3,7 +3,11 @@ library(tidyverse)
 library(tidyr)
 library(readxl)
 library(lubridate)
+library(rstudioapi)
+library(ggplot2)
 
+current_path = rstudioapi::getActiveDocumentContext()$path 
+setwd(dirname(current_path ))
 getwd() # confirm working directory is location of script
 bike.data <- read_excel("bikedata.xlsx")
 head(bike.data)
@@ -50,19 +54,8 @@ haversine <- function(lat1, lat2, long1, long2){
 filtered_bike.data <- filtered_bike.data %>%
   mutate(displacement_km = haversine(start_lat, end_lat, start_lng, end_lng)) %>%
   arrange(desc(displacement_km))
+
+ggplot(data=filtered_bike.data)+geom_point(mapping=aes(x=displacement_km, y=ride_length, color=member_casual))
   
-
-bike.alter <- drop_na(bike.alter)
-View(bike.alter)
-
-# see if there are any observations where member_casual is na
-ggplot(bike.alter, aes(x=member_casual))+geom_bar()
-
-# see if any bike rides are span different days
-separate(bike.alter, col=started_at, into=c('start_day', 'start_time'), sep=' ')
-
-head(bike.alter)
-
-# TODO: separate doesn't work; why?
 # TODO: what data do I want to keep? Does it matter if some values are NA?
 # TODO: what's up with the rides that are super long?

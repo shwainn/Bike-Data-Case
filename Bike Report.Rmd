@@ -14,7 +14,7 @@ output: html_document
 The data covers rides that started during the month of September 2022. It includes information like time of the ride (start and end), location of the ride (start station, end station, and start/end latitude/longitude), and the member status of the rider. 
 
 ### Data Cleaning
-I removed 175 observations where the ride lasted for more than 48 hours. I'm assuming that these are a result of a rider forgetting to lock a bike; this is corroborated by all of the long rides being attributed to casual riders, who are more likely to be unfamiliar with the process and not know or forget to lock a bike after use. 
+I removed 175 observations where the ride lasted for more than 48 hours. I'm assuming that these are a result of a rider forgetting to lock a bike; this is corroborated by all of the long rides being attributed to casual riders, who are more likely to be unfamiliar with the process and not know or forget to lock a bike after use. I will go into more detail for these later. 
 
 I also removed 9 observations where the ride is listed to have ended before it started. This is likely due to some error in data collection and can't be used for analysis. 
 
