@@ -10,6 +10,7 @@ library(hexbin)
 
 current_path = rstudioapi::getActiveDocumentContext()$path 
 setwd(dirname(current_path ))
+setwd(paste(getwd(), "/data", sep=""))
 getwd() # confirm working directory is location of script
 
 # Read data
@@ -223,6 +224,10 @@ chicago_monthly_highs <- data.frame(month=c(01, 02, 03, 04, 05, 06,
 
 ggplot(NULL) +
   geom_col(data=plot_data, mapping=aes(x=month, y=count, fill=member_casual)) +
+  facet_wrap(~member_casual)
+
+ggplot(NULL) +
+  geom_col(data=plot_data, mapping=aes(x=month, y=count, fill=member_casual)) +
   geom_line(data=chicago_monthly_highs, mapping=aes(x=month, y=highs * highs * 50)) +
   facet_wrap(~member_casual)
 
@@ -238,22 +243,52 @@ cor(data2$highs * data2$highs, data2$casual)
 cor(data2$highs, data2$member)
 cor(data2$highs, data2$casual)
 
+# types of bikes
+filtered_bike.data %>% 
+  group_by(member_casual, rideable_type) %>% 
+  drop_na() %>%
+  arrange(member_casual, weekday_end)  %>% 
+  summarise(number_of_rides = n())%>%
+  ggplot(aes(x = rideable_type, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  labs(title="Number of Rides by Type of Bike") + 
+  ylab("Count") + 
+  xlab("Type of Bike")
 
 # some viz
-ggplot(data=filtered_bike.data)+geom_bar(mapping=aes(x=day_of_week))+facet_wrap(~member_casual)
-ggplot(data=filtered_bike.data)+geom_bar(mapping=aes(x=month))+facet_wrap(~member_casual)
+filtered_bike.data %>%
+  group_by(member_casual) %>%
+  drop_na() %>%
+  ggplot(mapping=aes(x=displacement_km, y=ride_length, color=member_casual)) +
+  geom_point() +
+  labs(title = "Length of Ride, in min, to Displacement, in km") +
+  ylab("Length of Ride, in min") +
+  xlab("Displacement, in km")
 
 ggplot(data=filtered_bike.data)+geom_point(mapping=aes(x=displacement_km, y=ride_length, color=member_casual))
 
 # map of start station locations
-ggplot(data=filtered_bike.data, mapping=aes(x=start_lng, y=start_lat))+stat_binhex()
-ggplot(data=filtered_bike.data, mapping=aes(x=start_lng, y=start_lat))+stat_binhex()+facet_grid(weekday_end ~ member_casual)
+ggplot(data=filtered_bike.data, mapping=aes(x=start_lng, y=start_lat))+
+  stat_binhex()+
+  labs(title="Start Station Locations")+
+  ylab("Latitude")+
+  xlab("Longitude")
+
+ggplot(data=filtered_bike.data, mapping=aes(x=start_lng, y=start_lat))+
+  stat_binhex()+
+  facet_grid(weekday_end ~ member_casual)+
+  labs(title="Start Station Locations, Split by Member Status and Part of Week")+
+  ylab("Latitude")+
+  xlab("Longitude")
 
 ggplot(data=filtered_bike.data, mapping=aes(x=start_lng, y=start_lat)) +
   stat_density_2d(aes(fill = stat(density)), geom = 'raster', contour = FALSE) +       
   scale_fill_viridis_c() +
   coord_cartesian(expand = FALSE) +
-  geom_point(shape = '.', col = 'white')
+  geom_point(shape = '.', col = 'white') +
+  lab(title = "Bike Station Locations") +
+  xlab("Longitude") +
+  ylab("Latitude")
 
 # TODO: what data do I want to keep? Does it matter if some values are NA?
 # TODO: what's up with the rides that are super long?

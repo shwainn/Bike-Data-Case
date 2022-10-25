@@ -36,7 +36,7 @@ getwd() # confirm working directory is location of script
 
 # Read data
 bike_2021_10 <- read_excel("202110-divvy-tripdata.xlsx")
-bike_2021_11 <- read_excel("202112-divvy-tripdata.xlsx")
+bike_2021_11 <- read_excel("202111-divvy-tripdata.xlsx")
 bike_2021_12 <- read_excel("202112-divvy-tripdata.xlsx")
 bike_2022_01 <- read_excel("202201-divvy-tripdata.xlsx")
 bike_2022_02 <- read_excel("202202-divvy-tripdata.xlsx")
@@ -159,9 +159,11 @@ With analysis, I aim to answer the following hypotheses:
 
 * Casual riders are less likely to ride during winter months than members. If true, this would corroborate that members are using bikes to commute, which would result in them biking in the cold more often than recreational bikers.
 
-Additionally, I aim to answer the following question: 
+Additionally, I aim to answer the following questions: 
 
 * Where, if any, are the most common locations for rides to originate?
+
+* How do casual riders and members ride bike types (e-bikes and casual bikes) differently?
 
 # Analysis
 Using the following formula, we can obtain a visualization that shows on which days of the week riders are more likely to rent a bike.
@@ -183,6 +185,8 @@ filtered_bike.data %>%
 
 Here we see that members are more commonly riding on weekdays, aligning with days people go to work, and casual riders are more commonly riding on weekends, aligning with days people have more leisure time. However, it's important to note that members are also riding on weekends very frequently, nearly matching weekend ride numbers as casual riders. 
 
+&nbsp;
+
 ```{r, eval=FALSE}
 filtered_bike.data %>% 
   group_by(member_casual, weekday_end) %>% 
@@ -198,7 +202,10 @@ filtered_bike.data %>%
 ```
 
 ![](ride_average_duration.png)
+
 Here we see that casual riders tend to ride for longer per ride than members, which support the hypothesis that casual riders may prefer to ride for longer either for the sake of recreation or to get more value out of a single ride pass. 
+
+&nbsp;
 
 ```{r, eval=FALSE}
 filtered_bike.data %>% 
@@ -217,6 +224,8 @@ filtered_bike.data %>%
 
 Here we see that my second hypothesis is wrong; casual riders actual travel further while riding on bikes than members do. This tells us that casual riders are still using bikes to get to a destination, instead of circling a bike path and reracking the bike at the same station. 
 
+&nbsp;
+
 ```{r, eval=FALSE}
 filtered_bike.data %>% 
   group_by(member_casual, weekday_end) %>% 
@@ -234,7 +243,10 @@ filtered_bike.data %>%
 ```
 
 ![](average_rate_of_displacement.png)
+
 However, casual riders are riding slower than members are, getting to their destination in more time than members. There could be many reasons for this, all of which would require further investigation to refute. 
+
+&nbsp;
 
 ```{r, eval=FALSE}
 filtered_bike.data %>% 
@@ -253,6 +265,8 @@ filtered_bike.data %>%
 
 Here we see the expected drop-off of rides near the winter months, but we see the drop-off drastically for both casual riders and members. Strangely, members are still riding quite frequently during December but stop pretty drastically during January. 
 
+&nbsp;
+
 ```{r, eval=FALSE}
 plot_data <- filtered_bike.data %>% 
   group_by(member_casual, month) %>% 
@@ -270,7 +284,7 @@ ggplot(NULL) +
 
 ![](rides_compare_to_highs.png)
 
-Here, we compare the number of rides by month to the average monthly high temperatures in Chicago over the last 10 years, in Fahrenheit, obtained [here](https://www.currentresults.com/Weather/Illinois/Places/chicago-temperatures-by-month-average.php). Specifically, the line graph is the temperature in Fahrenheit squared, then multiplied by an arbitrary number (in this case 50) to match the scale of the volume of rides. We see that casual rides correlates fairly well with the square of the high temperature, while member rides matches well but stays near summer ride amounts at the end of the year instead of trailing off as much as expected. 
+Here, we compare the number of rides by month to the average monthly high temperatures in Chicago over the last 10 years, in Fahrenheit, obtained [here](https://www.currentresults.com/Weather/Illinois/Places/chicago-temperatures-by-month-average.php). Specifically, the line graph is the temperature in Fahrenheit squared, then multiplied by an arbitrary number (in this case 50) to match the scale of the volume of rides. We see that casual rides correlates fairly well with the square of the high temperature, while member rides stay fairly strong going into December but drop off once the new year rolls around.
 
 More specifically, the correlations are as follows:
 
@@ -284,6 +298,12 @@ tabl <- "
 cat(tabl)
 ```
 
+### Do Casual Riders Ride Different Bikes?
+
+![](rides_by_bike_type.png)
+
+Based on this chart, casual riders are more likely to ride normal bikes and are the exclusive riders of docked bikes*. Interestingly, E-bikes consist of a larger percentage of casual rides than member rides, meaning casual riders are more willing to pay extra fees for an e-bike than members are, even though members likely get a discount on e-bike rates (as compared to a similar Chicago bike-share service). 
+
 ### My Favorite Visualization
 I found this particular visualization to be amazing. Without further ado:
 ```{r, eval=FALSE}
@@ -294,3 +314,42 @@ ggplot(data=filtered_bike.data, mapping=aes(x=start_lng, y=start_lat)) +
   geom_point(shape = '.', col = 'white')
 ```
 ![](pretty_map.png)
+
+Behold! A map of Chicago, illustrated by bike stations. For the sake of runtime on my own computer, I will move forward with a map using hexbins, such as the following: 
+
+![](hexbin_start_stations.png)
+
+Here, we notice that this map that shows the start stations for bike rides highlights three popular locations; checking the latitude and longitude, they correspond with, in order of popularity, Downtown Chicago, Old Town Chicago, and the University of Chicago. After seeing this, I wondered if casual riders and members were going to different places, such as members going to Downtown for work near the financial district and casual riders going to Old Town for shopping and restaurants, which stemmed this visualization:
+
+![](hexbin_start_stations_facet_grid.png)
+
+As expected, there are fewer casual rides on weekdays and more on weekends, and there are fewer weekend rides overall since there are fewer days than in the week. However, there doesn't seem to be any difference in location preference between casual riders and members. 
+
+# Recommendations Based on Findings
+Based on these findings, I recommend the following to improve marketing efforts:
+
+1. Focus efforts in Downtown, Old Town, and the University of Chicago. 
+
+2. Advertise the reduced rate for e-bikes with annual membership. 
+
+3. Advertise the benefit of short rides in daily commutes. 
+
+The differences in casual rider and members that I found to be the most pertinent are the proportional use of e-bikes and the length of rides. Since casual riders use more e-bikes per capita, they would benefit the most from a discounted rate exclusive for members. Additionally, since casual riders tend to ride for longer, advertisements that showcase short, ten minute rides from one location in Downtown to another may open up casual riders to find value in using bikes more often, such as leaving work in the financial district to grab lunch at a great sandwich shop just outside of walking distance but an easy bike ride away; additionally, this may open up casual riders to riding for work commutes to avoid crowded public transportation or busy Downtown roads. Finally, since many bike rides start or end in Downtown, Old Town, or the University of Chicago, placing marketing efforts in those locations would result in the most attention with the least coverage. However, this may be changed based on advertising costs in high traffic areas.
+
+Based on findings, casual riders aren't significantly more inclined to use the bikes for leisure, seemingly also using the bikes for some sort of commute based on average displacement. Additionally, casual riders are less likely to ride in winter months, but not dramatically, with some of the difference possibly explained by there being more member rides to begin with. 
+
+While there are other differences in behavior, such as average rate of displacement and popular days of the week, I don't find any of them useful for marketing efforts. For example, while casual riders ride more often on weekends, I think that's typical behavior for users without a subscription, i.e. if bikes were free to use to anyone, I think those casual riders would have ride patterns similar to members as opposed to preferring long rides on days with more free time. 
+
+# Further Research 
+Since the data provided was limited, there are still valuable insights yet to be explored based on individual behaviors. For example, if there are a significant amount of casual riders who ride so often that they pay more annually than a subscription fee, then it may be helpful to give riders insights on their bike usage stats or implement a fare-cap similar to OMNY in the New York Metro; in this case, riders could buy passes to ride until they pay the amount of a subscription, from which every ride for the rest of the year is free. 
+
+I also suggest exploring data from other bike-share services, such as the New York Citi Bike or the Austin Metro Bike. Other bike-share services may provide insight on how people might use the service differently with different fees, rates, and station availability. 
+
+Finally, I suggest observing casual rider behavior to ascertain why casual riders are riding slower than member riders. Are they more likely to stop to window shop? Are they simply riding slower? Are they less comfortable with biking in Downtown, riding slower for safety or stopping for directions? It's difficult to say based on the data provided, so further research may enhance the recommendations made above. 
+
+# Thank You
+My name is Shawn Ha, and I am actively looking for internships and full-time jobs in data, project management, or software development related fields. Thank you for reading! I had a lot of fun exploring real-world data to this scale for the first time (over 5 million data points O.o) and experimenting with data visualization in R. You can contact me through [email](mailto:mrshawnha@gmail.com) and [LinkedIn](https://www.linkedin.com/in/shawn-ha/), and explore any projects that I've complete on [GitHub](https://github.com/shwainn).
+
+&nbsp;
+
+\* There is no indication of what a docked bike is. Looking at a similar Chicago bike-share service, bikes can be parked at docks for no extra charge or can be locked to bike racks, lamp posts, etc. with the included cable for \$1. However, both classic bikes and e-bikes can be locked in this way, as long as it's within the respective service areas and not on private property, and infraction of which would incur a $25 fee.  
