@@ -13,7 +13,7 @@
 
 <meta name="date" content="2022-10-20" />
 
-<title>Bike Data</title>
+<title>Behavioral Differences of Subscribers to Non-Subscribers for a City Bikeshare Program</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -350,7 +350,8 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">Bike Data</h1>
+<h1 class="title toc-ignore">Behavioral Differences of Subscribers to
+Non-Subscribers for a City Bikeshare Program</h1>
 <h4 class="author">Shawn Ha</h4>
 <h4 class="date">2022-10-20</h4>
 
@@ -362,30 +363,52 @@ display: none;
 <p><strong>Cyclistic</strong> is a bike-sharing service based in Chicago
 with over 5,000 bikes and over 600 docking stations. Users can unlock a
 bike from any station and lock it at any station. Users can get single
-rides, day passes, or become members for an annual subscription fee. As
-member subscriptions are more profitable, Cyclistic wants to convert
-casual riders (who ride with single or day passes) into members (who
-ride with subscriptions). How do casual riders and members use the
+ride passes, day passes, or become members for an annual subscription
+fee. As member subscriptions are more profitable, Cyclistic wants to
+convert casual riders (who ride with single or day passes) into members
+(who ride with subscriptions). How do casual riders and members use the
 service differently, and how can that inform how Cyclistic should market
 membership to casual riders?</p>
+</div>
+<div id="business-task" class="section level1">
+<h1>Business Task</h1>
+<p>Cyclistic wants to determine how casual users use bikes differently
+than members. This information would help Cyclistic design new marketing
+strategies aimed towards converting casual riders into annual members.
+For example, if casual riders tend to ride as much as or more often than
+members, Cyclistic can run campaigns to remind casual users of cost
+savings of signing up as a member (note: with the data available, it
+cannot be determined how often one user rides). These insights would be
+useful to the marketing team as well as benefit the company as a whole
+by helping to increase profits by increasing the number of members.</p>
 </div>
 <div id="data" class="section level1">
 <h1>Data</h1>
 <div id="data-overview" class="section level3">
 <h3>Data Overview</h3>
-<p>The data covers rides that started during the month of September
+<p>The data is made available by Motivate International Inc. under this
+<a href="https://ride.divvybikes.com/data-license-agreement">license</a>.
+While this data is based on real world data, the name of the company has
+been changed for the purposes of this case study.</p>
+<p>The data covers rides that started after March 2020, but we will
+consider only the last 12 months of data, from October 2021 to September
 2022. It includes information like time of the ride (start and end),
 location of the ride (start station, end station, and start/end
-latitude/longitude), and the member status of the rider.</p>
+latitude/longitude), and the member status of the rider. The data also
+includes ride and station IDs, but those will not be used for our
+analysis.</p>
+<p>There are some issues with the data, however. Some ride times are
+incorrect, such as end times being before start times, among other
+issues. For this reason, the data requires cleaning.</p>
 </div>
-<div id="data-manipulation" class="section level3">
-<h3>Data Manipulation</h3>
-<p>I removed 175 observations where the ride lasted for more than 48
+<div id="data-cleaning" class="section level3">
+<h3>Data Cleaning</h3>
+<p>I removed 1,105 observations where the ride lasted for more than 48
 hours. I’m assuming that these are a result of a rider forgetting to
 lock a bike; this is corroborated by all of the long rides being
 attributed to casual riders, who are more likely to be unfamiliar with
 the process and not know or forget to lock a bike after use.</p>
-<p>I also removed 9 observations where the ride is listed to have ended
+<p>I also removed 55 observations where the ride is listed to have ended
 before it started. This is likely due to some error in data collection
 and can’t be used for analysis.</p>
 <p>I removed 63 observations where the ride is listed to have ended the
@@ -393,16 +416,79 @@ second it started. This is also likely due to some error, but can
 possibly be a user accidentally immediately locking the bike after
 unlocking. Either way, the observations don’t represent real use cases
 of the service and therefore wouldn’t be useful for analysis.</p>
-<p>Similarly, I chose to ignore 15,458 observations where the ride
+<p>Similarly, I chose to ignore 113,229 observations where the ride
 lasted less than one minute. This is an arbitrary threshold and can be
 refined by observing consumer behaviors, but I felt that this filters
-out many of the data points that aren’t actual rides. Rides longer than
-one minute are much more likely to represent a customer legitimately
-using a bike.</p>
-<p>After this, we are left with 685,634 observations, of which all of
+out many of the data points that don’t represent actual rides. Rides
+longer than one minute are much more likely to represent a customer
+legitimately using a bike.</p>
+<p>After this, I removed 1 observation which, based on the latitude and
+longitude, was a test of the system at a house in Quebec.</p>
+<p>After this, we are left with 5,601,407 observations, of which all of
 them represent rides that last between one minute and 48 hours,
 inclusive.</p>
 </div>
+<div id="data-transformations" class="section level3">
+<h3>Data Transformations</h3>
+<p>To make use of latitude and longitude data, I used a <a href="https://en.wikipedia.org/wiki/Haversine_formula">Haversine
+formula</a> to calculate the great-circle distance between the start
+station and the end station. Note that this value can be up to 0.5%
+inaccurate (since the formula applies to a perfect sphere, which the
+Earth isn’t) and would only be accurate if the rider took a straight
+path to their destination, which is basically impossible. However, this
+value can be useful to understand if a rider is using the bike to get
+somewhere or just to ride around, which can be indicated by the stations
+being far away from one another versus the stations being close by.</p>
+<pre class="r"><code>haversine &lt;- function(lat1, lat2, long1, long2){
+  p &lt;- pi / 180
+  a &lt;- 0.5 - cos((lat2 - lat1) * p) / 2 +
+      cos(lat1 * p) * cos(lat2 * p) * 
+      (1 - cos((long2 - long1) * p)) / 2
+  
+  return(2 * 6371 * asin(sqrt(a)))
+}
+
+filtered_bike.data &lt;- filtered_bike.data %&gt;%
+  mutate(displacement_km = haversine(start_lat, end_lat, start_lng, end_lng)) %&gt;%
+  arrange(desc(displacement_km))</code></pre>
+<p>Following logically, I added a column for rate of displacement, which
+divides the displacement above by length of the ride, in minutes. This
+approximates a speed statistic (since calculating a speed would assume
+that every bike ride is a straight line to its destination), but also
+provides insight on if some riders are renting bikes to bike leisurely
+and are returning the bike at or near their starting location.</p>
+<p>For ease of analysis, I added columns that divide the date into day,
+month, and year, as well as day of week and whether the day is a
+weekend.</p>
+</div>
+</div>
+<div id="hypotheses" class="section level1">
+<h1>Hypotheses</h1>
+<p>With analysis, I aim to answer the following hypotheses:</p>
+<ul>
+<li><p>Member riders ride more often on weekdays. If true, this would
+point towards members using bikes to commute to work.</p></li>
+<li><p>Casual riders have a lower rate of displacement. If true, this
+would corroborate the idea that casual riders are renting bikes for
+leisure instead of for the purpose of arriving at a new
+destination.</p></li>
+<li><p>Casual riders ride for longer. If true, this would corroborate if
+casual riders are renting for leisure, and may be an indicator that
+single pass riders are riding for longer to make more use out of their
+money.</p></li>
+<li><p>Casual riders are less likely to ride during winter months than
+members. If true, this would corroborate that members are using bikes to
+commute, which would result in them biking in the cold more often than
+recreational bikers.</p></li>
+</ul>
+<p>Additionally, I aim to answer the following question:</p>
+<ul>
+<li>Where, if any, are the most common locations for rides to
+originate?</li>
+</ul>
+</div>
+<div id="analysis" class="section level1">
+<h1>Analysis</h1>
 </div>
 
 

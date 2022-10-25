@@ -1,47 +1,105 @@
 install.packages("tidyverse")
+install.packages("hexbin")
 library(tidyverse)
 library(tidyr)
 library(readxl)
 library(lubridate)
 library(rstudioapi)
 library(ggplot2)
+library(hexbin)
 
 current_path = rstudioapi::getActiveDocumentContext()$path 
 setwd(dirname(current_path ))
 getwd() # confirm working directory is location of script
-bike.data <- read_excel("bikedata.xlsx")
-head(bike.data)
 
+# Read data
+bike_2021_10 <- read_excel("202110-divvy-tripdata.xlsx")
+bike_2021_11 <- read_excel("202111-divvy-tripdata.xlsx")
+bike_2021_12 <- read_excel("202112-divvy-tripdata.xlsx")
+bike_2022_01 <- read_excel("202201-divvy-tripdata.xlsx")
+bike_2022_02 <- read_excel("202202-divvy-tripdata.xlsx")
+bike_2022_03 <- read_excel("202203-divvy-tripdata.xlsx")
+bike_2022_04 <- read_excel("202204-divvy-tripdata.xlsx")
+bike_2022_05 <- read_excel("202205-divvy-tripdata.xlsx")
+bike_2022_06 <- read_excel("202206-divvy-tripdata.xlsx")
+bike_2022_07 <- read_excel("202207-divvy-tripdata.xlsx")
+bike_2022_08 <- read_excel("202208-divvy-tripdata.xlsx")
+bike_2022_09 <- read_excel("202209-divvy-publictripdata.xlsx")
+
+# Compare columns names to join data later
+colnames(bike_2021_10)
+colnames(bike_2021_11)
+colnames(bike_2021_12)
+colnames(bike_2022_01)
+colnames(bike_2022_02)
+colnames(bike_2022_03)
+colnames(bike_2022_04)
+colnames(bike_2022_05)
+colnames(bike_2022_06)
+colnames(bike_2022_07)
+colnames(bike_2022_08)
+colnames(bike_2022_09)
+
+# Ensure data types of column match among different files
+str(bike_2021_10)
+str(bike_2021_11)
+str(bike_2021_12)
+str(bike_2022_01)
+str(bike_2022_02)
+str(bike_2022_03)
+str(bike_2022_04)
+str(bike_2022_05)
+str(bike_2022_06)
+str(bike_2022_07)
+str(bike_2022_08)
+str(bike_2022_09)
+
+# Fix incorrect data type
+bike_2022_09$end_station_id <- as.character(bike_2022_09$end_station_id)
+
+# Combine all data sets into one data frame
+bike.data <- bind_rows(bike_2021_10, bike_2021_11, bike_2021_12, bike_2022_01, 
+                       bike_2022_02, bike_2022_03, bike_2022_04, bike_2022_05, 
+                       bike_2022_06, bike_2022_07, bike_2022_08, bike_2022_09)
+
+# Convert categories into factors
 bike.data$rideable_type <- as.factor(bike.data$rideable_type)
 bike.data$member_casual <- as.factor(bike.data$member_casual)
-str(bike.data)
+glimpse(bike.data)
 
-# altering columns
+# Remove ID columns to reduce clutter
 bike.data <- bike.data %>%
   select(-ride_id)
+bike.data <- bike.data %>%
+  select(-start_station_id)
+bike.data <- bike.data %>%
+  select(-end_station_id)
 
 # remove observations where ended_at is more than 48 hours after start_at
-# likely indicates user forgot to rerack bike
-# remove 9 data points where ended_at is before started_at
-# and remove 63 data points where the times are the same
-# indicates some error or no ride, should be removed
+# remove data points where ended_at is before started_at
+# remove data points where the times are the same
+# remove data points where ended_at is less than one minut after started_at
 filtered_bike.data <- bike.data %>%
   filter(ended_at <= started_at + days(2)) %>%
   arrange(ended_at - started_at)
 filtered_bike.data <- filtered_bike.data %>%
-  filter(ended_at > started_at) %>%
+  filter(ended_at >= started_at) %>%
   arrange(ended_at - started_at)
 filtered_bike.data <- filtered_bike.data %>%
   filter(ended_at >= started_at + seconds(60)) %>%
   arrange(ended_at - started_at)
-View(filtered_bike.data)
+
+# remove observations outside of the latitude longitude range of the city of Chicago
+filtered_bike.data <- filtered_bike.data %>%
+  filter(start_lng < -87 & start_lng > -88)
+filtered_bike.data <- filtered_bike.data %>%
+  filter(start_lat < 43 & start_lat > 41)
 
 # add a column for length of bike ride
 filtered_bike.data <- filtered_bike.data %>%
   mutate(ride_length = ended_at - started_at)
 
-# add a column for estimating ride displacement using Haversine formula
-# haversine function
+# add a column for ride displacement using Haversine formula
 haversine <- function(lat1, lat2, long1, long2){
   p <- pi / 180
   a <- 0.5 - cos((lat2 - lat1) * p) / 2 +
@@ -55,7 +113,147 @@ filtered_bike.data <- filtered_bike.data %>%
   mutate(displacement_km = haversine(start_lat, end_lat, start_lng, end_lng)) %>%
   arrange(desc(displacement_km))
 
+# make sure that factors are correct types, no observations outside of expected
+ggplot(data=filtered_bike.data) + geom_bar(mapping=aes(x=member_casual))
+ggplot(data=filtered_bike.data) + geom_bar(mapping=aes(x=rideable_type))
+
+# Summary statistics
+colnames(filtered_bike.data)
+nrow(filtered_bike.data)
+dim(filtered_bike.data)
+head(filtered_bike.data)
+str(filtered_bike.data)
+summary(filtered_bike.data)
+table(filtered_bike.data$member_casual)
+
+mean(filtered_bike.data$ride_length)
+median(filtered_bike.data$ride_length)
+max(filtered_bike.data$ride_length)
+min(filtered_bike.data$ride_length)
+
+
+# add columns that split date, month, day, year, day_of_week for start time
+filtered_bike.data$date <- as.Date(filtered_bike.data$started_at) #The default format is yyyy-mm-dd
+filtered_bike.data$month <- format(as.Date(filtered_bike.data$date), "%m")
+filtered_bike.data$day <- format(as.Date(filtered_bike.data$date), "%d")
+filtered_bike.data$year <- format(as.Date(filtered_bike.data$date), "%Y")
+filtered_bike.data$day_of_week <- format(as.Date(filtered_bike.data$date), "%A")
+filtered_bike.data$day_of_week <- ordered(filtered_bike.data$day_of_week, levels=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+filtered_bike.data$weekday_end <- cbind(ifelse(filtered_bike.data$day_of_week == "Sunday" | filtered_bike.data$day_of_week == "Saturday", "Weekend", "Weekday"))
+
+# aggregate data
+filtered_bike.data %>%
+  group_by(member_casual) %>%
+  summarize(mean_ride_length = mean(ride_length),
+            median_ride_length = median(ride_length),
+            max_ride_length = max(ride_length),
+            mein_ride_length = min(ride_length))
+
+filtered_bike.data %>%
+  group_by(day_of_week, member_casual) %>%
+  summarize(mean_ride_length = mean(ride_length),
+            median_ride_length = median(ride_length),
+            max_ride_length = max(ride_length),
+            mein_ride_length = min(ride_length))
+
+filtered_bike.data %>%
+  group_by(weekday_end, member_casual) %>%
+  summarize(number_of_rides = n(),
+            mean_ride_length = mean(ride_length),
+            median_ride_length = median(ride_length),
+            max_ride_length = max(ride_length),
+            mein_ride_length = min(ride_length))
+
+filtered_bike.data %>% 
+  group_by(member_casual, day_of_week) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length)) %>% 
+  arrange(member_casual, day_of_week)  %>% 
+  ggplot(aes(x = day_of_week, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  facet_wrap(~member_casual) +
+  labs(title="Rides by Day of Week") +
+  ylab("Number of Rides") +
+  xlab("Days of Week")
+
+filtered_bike.data %>% 
+  group_by(member_casual, weekday_end) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length)) %>% 
+  arrange(member_casual, weekday_end)  %>% 
+  ggplot(aes(x = weekday_end, y = average_duration, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  labs(title="Average Length of Ride, Split by Part of Week and Member Status") + 
+  ylab("Average Duration, in minutes") + 
+  xlab("")
+
+filtered_bike.data %>% 
+  group_by(member_casual, weekday_end) %>% 
+  drop_na() %>%
+  summarise(average_displacement = mean(displacement_km)) %>% 
+  arrange(member_casual, weekday_end)  %>% 
+  ggplot(aes(x = weekday_end, y = average_displacement, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  labs(title="Average Displacement, Split by Part of Week and Member Status") + 
+  ylab("Average Displacement, in km") + 
+  xlab("")
+
+filtered_bike.data %>% 
+  group_by(member_casual, weekday_end) %>% 
+  drop_na() %>%
+  mutate(ride_length = as.numeric(ride_length)) %>%
+  summarise(average_displacement = mean(displacement_km),
+            average_duration = mean(ride_length),
+            average_rate = mean(displacement_km / ride_length)) %>% 
+  arrange(member_casual, weekday_end)  %>% 
+  ggplot(aes(x = weekday_end, y = average_rate, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  labs(title="Average Rate of Displacement, Split by Part of Week and Member Status") + 
+  ylab("Average Rate of Displacement, in km / min") + 
+  xlab("")
+
+plot_data <- filtered_bike.data %>% 
+  group_by(member_casual, month) %>% 
+  summarise(count = n()) %>%
+  arrange(month, member_casual)
+
+chicago_monthly_highs <- data.frame(month=c(01, 02, 03, 04, 05, 06, 
+                                            07, 08, 09, 10, 11, 12),
+                                    highs=c(31, 35, 47, 59, 71, 80, 85, 83, 76, 63, 48, 37))
+
+ggplot(NULL) +
+  geom_col(data=plot_data, mapping=aes(x=month, y=count, fill=member_casual)) +
+  geom_line(data=chicago_monthly_highs, mapping=aes(x=month, y=highs * highs * 50)) +
+  facet_wrap(~member_casual)
+
+chicago_monthly_highs <- data.frame(month=c("01", "02", "03", "04", "05", "06", 
+                                            "07", "08", "09", "10", "11", "12"),
+                                    highs=c(31, 35, 47, 59, 71, 80, 85, 83, 76, 63, 48, 37))
+data2 <- inner_join(chicago_monthly_highs, plot_data, by="month")
+data2 <- data2 %>%
+  pivot_wider(names_from=member_casual, values_from = count)
+
+cor(data2$highs * data2$highs, data2$member)
+cor(data2$highs * data2$highs, data2$casual)
+cor(data2$highs, data2$member)
+cor(data2$highs, data2$casual)
+
+
+# some viz
+ggplot(data=filtered_bike.data)+geom_bar(mapping=aes(x=day_of_week))+facet_wrap(~member_casual)
+ggplot(data=filtered_bike.data)+geom_bar(mapping=aes(x=month))+facet_wrap(~member_casual)
+
 ggplot(data=filtered_bike.data)+geom_point(mapping=aes(x=displacement_km, y=ride_length, color=member_casual))
-  
+
+# map of start station locations
+ggplot(data=filtered_bike.data, mapping=aes(x=start_lng, y=start_lat))+stat_binhex()
+ggplot(data=filtered_bike.data, mapping=aes(x=start_lng, y=start_lat))+stat_binhex()+facet_grid(weekday_end ~ member_casual)
+
+ggplot(data=filtered_bike.data, mapping=aes(x=start_lng, y=start_lat)) +
+  stat_density_2d(aes(fill = stat(density)), geom = 'raster', contour = FALSE) +       
+  scale_fill_viridis_c() +
+  coord_cartesian(expand = FALSE) +
+  geom_point(shape = '.', col = 'white')
+
 # TODO: what data do I want to keep? Does it matter if some values are NA?
 # TODO: what's up with the rides that are super long?
